@@ -3,6 +3,14 @@ import numpy as np
 
 
 class LQRController:
+    """
+    Linear Quadratic Regulator (LQR) controller based on planar dynamics for two-wheel robot
+    Q matrix is weighting on minimising state variables (wheel pos, wheel vel, body angle, body vel) [x]
+    R matrix is weighting on minimising actuator torque [u]
+    K matrix is gains which correlate state variable error to torque [u=-Kx]
+    Controllability is assessed based on the condition number
+    """
+    
     def __init__(self, utils, **kwargs):
         self.utils = utils
         

@@ -2,6 +2,12 @@ import math
 
 
 class Actuator:
+    """
+    System dynamics for a BDC/BLDC motor
+    Torque ripple occurs due to fluctuations in magnetic fields as the motor commutates
+    Back-emf in motor limits the torque - increases with speed (approximated to linear relationship)
+    """
+    
     def __init__ (self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)

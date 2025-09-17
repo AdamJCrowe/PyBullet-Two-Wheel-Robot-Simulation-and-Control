@@ -3,7 +3,14 @@ from scipy.stats import vonmises
 
 
 class IMU:
+    """
+    Simulating IMU error
+    Drift from gyroscope, and noise from both gyroscope and accelerometer (noisier)
+    Gauss-Markov model used for drift, and von Mises distribution for noise
+    """
+    
     def __init__(self, loop_time, **kwargs):
+      
         for key, value in kwargs.items():
             setattr(self, key, value)
 
@@ -22,6 +29,10 @@ class IMU:
 
 
 class Encoder:
+    """
+    Simulating encoder error due to resolution
+    """
+    
     def __init__(self, **kwargs):      
         for key, value in kwargs.items():
             setattr(self, key, value)

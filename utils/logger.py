@@ -2,6 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class Logger:
+    """
+    Log and plot true/measured state and torque
+    """
+    
     def __init__(self, total_steps):
         self.states = np.zeros((4, total_steps),dtype=float)
         self.observed_states = np.zeros((4, total_steps + 1),dtype=float)

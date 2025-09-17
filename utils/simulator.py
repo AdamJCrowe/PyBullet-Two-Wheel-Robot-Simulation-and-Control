@@ -1,5 +1,6 @@
 import time
 import math
+import os
 import numpy as np
 import pybullet as pyb
 import pybullet_data
@@ -7,6 +8,25 @@ from scipy.spatial.transform import Rotation
 
 
 class Simulator:
+    """
+    Handles simulating a two-wheel robot over a set period of time
+    Frequency determines how often controller/physics update
+    Sub-steps update physics in-between controller updates
+
+    Setup simulation:
+    - Load URDF
+    - Set robot start pose and camera
+    - Find inertia terms which are used by the controller and observor
+    - Simulate gearbox friciton by setting joints to have opposing torque
+
+    Running simulation:
+    - Save current state of the robot (wheel/body angle/velocity)
+    - Apply force disturbance to robot body
+    - Set actuator torque
+    - Ensure GUI plays at real time speed (faster/slower if slow_motion_factor != 1)
+    - Step simulation
+    """
+    
     def __init__(self, actuator_friction_torque, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -18,6 +38,9 @@ class Simulator:
         self.disturbance_timer = self.total_time / 2
         self.disturbance_switch = False
 
+        urdf_file = os.path.join(os.path.dirname(__file__), "..", "urdf", "robot_model.urdf")
+        urdf_file = os.path.abspath(urdf_file)
+        
         physics_client = pyb.connect(pyb.GUI) 
         pyb.setTimeStep(self.loop_time) 
         pyb.setRealTimeSimulation(0)
@@ -31,7 +54,7 @@ class Simulator:
                                      cameraYaw=90,
                                      cameraPitch=0,
                                      cameraTargetPosition=[0, 0, 0.1])
-        self.robot_ID: int = pyb.loadURDF("robot_model.urdf", flags=pyb.URDF_USE_IMPLICIT_CYLINDER)
+        self.robot_ID: int = pyb.loadURDF(urdf_file, flags=pyb.URDF_USE_IMPLICIT_CYLINDER)
 
         self.wheel_mass = pyb.getDynamicsInfo(self.robot_ID, 1)[0]
         self.wheel_radius = (pyb.getCollisionShapeData(self.robot_ID, 1)[0])[3][1]
@@ -46,11 +69,11 @@ class Simulator:
         self.starting_orientation = rotation_quaternion
         pyb.resetBasePositionAndOrientation(self.robot_ID, self.starting_position, self.starting_orientation)
 
-        self.set_wheel_friction(1, actuator_friction_torque)
-        self.set_wheel_friction(2, actuator_friction_torque)
+        self.set_gearbox_friction(1, actuator_friction_torque)
+        self.set_gearbox_friction(2, actuator_friction_torque)
 
 
-    def set_wheel_friction(self, wheel_ID, actuator_friction_torque):
+    def set_gearbox_friction(self, wheel_ID, actuator_friction_torque):
         pyb.changeDynamics(self.robot_ID, wheel_ID,
             lateralFriction=self.wheel_static_CoF,
             spinningFriction=self.wheel_static_CoF,
@@ -58,7 +81,7 @@ class Simulator:
         pyb.setJointMotorControl2(self.robot_ID, wheel_ID, pyb.VELOCITY_CONTROL, targetVelocity=0, force=actuator_friction_torque) # motor friction
 
 
-    def update_true_state(self):
+    def save_state(self):
         jointA_pos, jointA_vel = pyb.getJointState(self.robot_ID, 1)[0:2]
         jointB_pos, jointB_vel = pyb.getJointState(self.robot_ID, 2)[0:2]
         self.state[0,0] = (jointA_pos + jointB_pos) / 2 
@@ -92,6 +115,7 @@ class Simulator:
             jointIndex=actuator_ID, 
             controlMode=pyb.TORQUE_CONTROL, 
             force=actuator_torque)
+
 
     def correct_GUI_time(self):
         self.elapsed_time = time.time() - self.GUI_time
